@@ -24,24 +24,26 @@ pub fn apply_forces(player: *obj.Player) void {
     player.velocity.y = rlm.Clamp(player.velocity.y, -8, 8);
 }
 
+ pub const movement = struct {
+    pub fn free_fly(player: *obj.Player) void {
+        // apply friction for X
+        if (player.velocity.x > 0) { player.velocity.x -= FRICTION * rl.GetFrameTime(); }
+        if (player.velocity.x < 0) { player.velocity.x += FRICTION * rl.GetFrameTime(); }
+        if (player.velocity.x >= -1 and player.velocity.x <= 1) { player.velocity.x = 0; }
+        player.box.x += player.velocity.x;
 
-pub fn free_fly(player: *obj.Player) void {
-    // apply friction for X
-    if (player.velocity.x > 0) { player.velocity.x -= FRICTION * rl.GetFrameTime(); }
-    if (player.velocity.x < 0) { player.velocity.x += FRICTION * rl.GetFrameTime(); }
-    if (player.velocity.x >= -1 and player.velocity.x <= 1) { player.velocity.x = 0; }
-    player.box.x += player.velocity.x;
+        // apply friction for Y
+        if (player.velocity.y > 0) { player.velocity.y -= FRICTION * rl.GetFrameTime(); }
+        if (player.velocity.y < 0) { player.velocity.y += FRICTION * rl.GetFrameTime(); }
+        if (player.velocity.y >= -1 and player.velocity.y <= 1) { player.velocity.y = 0; }
+        player.box.y -= player.velocity.y;
 
-    // apply friction for Y
-    if (player.velocity.y > 0) { player.velocity.y -= FRICTION * rl.GetFrameTime(); }
-    if (player.velocity.y < 0) { player.velocity.y += FRICTION * rl.GetFrameTime(); }
-    if (player.velocity.y >= -1 and player.velocity.y <= 1) { player.velocity.y = 0; }
-    player.box.y -= player.velocity.y;
+        // clamp velocities to not reach light speed in a second
+        player.velocity.x = rlm.Clamp(player.velocity.x, -4, 4);
+        player.velocity.y = rlm.Clamp(player.velocity.y, -4, 4);
+    }
+};
 
-    // clamp velocities to not reach light speed in a second
-    player.velocity.x = rlm.Clamp(player.velocity.x, -4, 4);
-    player.velocity.y = rlm.Clamp(player.velocity.y, -4, 4);
-}
 
 
 pub fn apply_player_collisions(player: *obj.Player, map: obj.Map) void {

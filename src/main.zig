@@ -4,23 +4,10 @@ const std = @import("std");
 const obj = @import("types.zig");
 const phs = @import("physics.zig");
 
-// fn load_level(comptime file_path: []const u8) void {
-    // // TODO
-// }
+const DEBUG = true;
 
 // NOTE
 // Coordinate system starts at top left corner, whitch means THE Y AXIS IS FLIPPED!!!
-
-// TODO
-// Setup level loading
-// Setup texture loading
-
-// DEBUG
-// pub fn main() anyerror!void {
-//     load_level("./resources/scene.dat");
-// }
-
-
 
 // MAIN
 pub fn main() anyerror!void
@@ -52,6 +39,7 @@ pub fn main() anyerror!void
 
     var player: obj.Player = .{ 
         .box = .{ .x = 20, .y = 300, .width = 20, .height = 20 }, 
+        .detection_box = .{ .width = 21, .height = 21 },
         .velocity = .{ .x = 0, .y = 0 }, 
     };
     
@@ -79,7 +67,7 @@ pub fn main() anyerror!void
         if (fly) {
             if (rl.IsKeyDown(rl.KeyboardKey.KEY_UP)) { player.velocity.y   += 1.5; }
             if (rl.IsKeyDown(rl.KeyboardKey.KEY_DOWN)) { player.velocity.y -= 1.5; }
-            phs.free_fly(&player);
+            phs.movement.free_fly(&player);
         } else {
             if (rl.IsKeyPressed(rl.KeyboardKey.KEY_UP)) { player.velocity.y = 15; } // jump
             phs.apply_forces(&player);
@@ -117,13 +105,18 @@ pub fn main() anyerror!void
 
                 for (map.tiles) |tile| {
                     rl.DrawRectangleRec(tile.box, rl.GRAY);
-                    var midpoint: rl.Vector2 = .{ .x = tile.box.x + (tile.box.width / 2), .y = tile.box.y + (tile.box.height / 2) };
-                    rl.DrawCircleV( midpoint, 4, rl.GREEN);
 
-                    var col_rec = rl.GetCollisionRec(player.box, tile.box);
-                    rl.DrawRectangleRec(col_rec, rl.BLUE);
+                    // DEBUG
+                    if (DEBUG) {
+                        var midpoint: rl.Vector2 = .{ .x = tile.box.x + (tile.box.width / 2), .y = tile.box.y + (tile.box.height / 2) };
+                        rl.DrawCircleV( midpoint, 4, rl.GREEN);
 
-                    rl.DrawCircleV( .{ .x = tile.box.x, .y = tile.box.y }, 4, rl.ORANGE );
+                        var col_rec = rl.GetCollisionRec(player.box, tile.box);
+                        rl.DrawRectangleRec(col_rec, rl.BLUE);
+
+                        rl.DrawCircleV( .{ .x = tile.box.x, .y = tile.box.y }, 4, rl.ORANGE );
+                    }
+
                 }
 
                 camera.End();
