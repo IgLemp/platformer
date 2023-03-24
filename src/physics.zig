@@ -8,7 +8,7 @@ const FRICTION: f32 = 10;
 
 
 
-pub fn apply_forces(player: *obj.Player) void {
+pub fn ApplyForces(player: *obj.Player) void {
     // apply gravity
     player.velocity.y += GRAVITY * rl.GetFrameTime();
     player.box.y -= player.velocity.y;
@@ -25,7 +25,7 @@ pub fn apply_forces(player: *obj.Player) void {
 }
 
  pub const movement = struct {
-    pub fn free_fly(player: *obj.Player) void {
+    pub fn FreeFly(player: *obj.Player) void {
         // apply friction for X
         if (player.velocity.x > 0) { player.velocity.x -= FRICTION * rl.GetFrameTime(); }
         if (player.velocity.x < 0) { player.velocity.x += FRICTION * rl.GetFrameTime(); }
@@ -46,7 +46,7 @@ pub fn apply_forces(player: *obj.Player) void {
 
 
 
-pub fn apply_player_collisions(player: *obj.Player, map: obj.Map) void {
+pub fn ApplyPlayerCollisions(player: *obj.Player, map: obj.Map) void {
 
     // for every tile
     for (map.tiles) |tile| {

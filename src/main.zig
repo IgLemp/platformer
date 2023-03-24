@@ -39,7 +39,6 @@ pub fn main() anyerror!void
 
     var player: obj.Player = .{ 
         .box = .{ .x = 20, .y = 300, .width = 20, .height = 20 }, 
-        .detection_box = .{ .width = 21, .height = 21 },
         .velocity = .{ .x = 0, .y = 0 }, 
     };
     
@@ -67,14 +66,14 @@ pub fn main() anyerror!void
         if (fly) {
             if (rl.IsKeyDown(rl.KeyboardKey.KEY_UP)) { player.velocity.y   += 1.5; }
             if (rl.IsKeyDown(rl.KeyboardKey.KEY_DOWN)) { player.velocity.y -= 1.5; }
-            phs.movement.free_fly(&player);
+            phs.movement.FreeFly(&player);
         } else {
             if (rl.IsKeyPressed(rl.KeyboardKey.KEY_UP)) { player.velocity.y = 15; } // jump
-            phs.apply_forces(&player);
+            phs.ApplyForces(&player);
         }
 
         // run collisions
-        phs.apply_player_collisions(&player, map);
+        phs.ApplyPlayerCollisions(&player, map);
 
         // camera setup
         camera.target = rl.Vector2 { .x = player.box.x + player.box.width / 2, .y = player.box.y + player.box.height / 2 };
