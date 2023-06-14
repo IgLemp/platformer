@@ -1,4 +1,5 @@
-const rl = @import("raylib");
+const rl  = @import("raylib");
+const std = @import("std");
 
 pub const Object = struct {
     box: rl.Rectangle,
@@ -7,16 +8,18 @@ pub const Object = struct {
 
 pub const Player = struct {
     box: rl.Rectangle,
-    // detection_box: NullOriginBox,
+    detection_box: DetectionBox,
     velocity: rl.Vector2,
     // max_velocity: f32,
 };
 
-// const NullOriginBox = struct {
-//     height: f32,
-//     width:  f32
-// };
+pub const DetectionBox = struct {
+    x:     *f32,
+    y:     *f32,
+    width:  f32,
+    height: f32
+};
 
 pub const Map = struct {
-    tiles: []Object,
+    tiles: *std.ArrayList(Object),
 };

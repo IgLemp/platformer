@@ -12,6 +12,11 @@ const DEBUG = true;
 // MAIN
 pub fn main() anyerror!void
 {
+    // MEMORY ALLOCATOR
+    //--------------------------------------------------------------------------------------
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var arenaAlloc = arena.allocator();
+
     // Initialization
     //--------------------------------------------------------------------------------------
     const screenWidth = 800;
@@ -28,26 +33,29 @@ pub fn main() anyerror!void
         .zoom = 1,
     };
 
-    // var map: Map = Map { .tiles = undefined };
-    var objects = [_]obj.Object{
-        .{ .box = .{ .x = 0, .y = 0, .width = 300, .height = 20, },   .texture = null },
-        .{ .box = .{ .x = 100, .y = 0, .width = 20, .height = 200, }, .texture = null }
-    };
+    // var map: obj.Map = obj.Map { .tiles = undefined };
+    // var objects = [_]obj.Object{
+    //     .{ .box = .{ .x = 0, .y = 0, .width = 300, .height = 20, },   .texture = null },
+    //     .{ .box = .{ .x = 100, .y = 0, .width = 20, .height = 200, }, .texture = null }
+    // };
+
+    var objects = std.ArrayList(obj.Object).init(arenaAlloc);
+    try objects.append(.{ .box = .{ .x = 0,   .y = 0, .width = 300, .height = 20,  }, .texture = null }); 
+    try objects.append(.{ .box = .{ .x = 100, .y = 0, .width = 20,  .height = 200, }, .texture = null });
 
     var map: obj.Map = .{ .tiles = &objects };
 
 
     var player: obj.Player = .{ 
         .box = .{ .x = 20, .y = 300, .width = 20, .height = 20 }, 
+        .detection_box = undefined,
         .velocity = .{ .x = 0, .y = 0 }, 
     };
-    
-    // dirty object fixer upper
-    player.box.y = -player.box.y;
 
-    for (map.tiles) |*tile| {
-        tile.box.y = -tile.box.height;
-    }
+    player.detection_box = .{ .x = &player.box.x, .y = &player.box.y, .width = 22, .height = 22 };
+    
+    var texture = rl.LoadTexture("./resources/log.png");
+    var playerTexture = rl.LoadTexture("./resources/cursor.png");
 
     // freefly
     var fly = true;
@@ -67,8 +75,7 @@ pub fn main() anyerror!void
             if (rl.IsKeyDown(rl.KeyboardKey.KEY_UP)) { player.velocity.y   += 1.5; }
             if (rl.IsKeyDown(rl.KeyboardKey.KEY_DOWN)) { player.velocity.y -= 1.5; }
             phs.movement.FreeFly(&player);
-        } else {
-            if (rl.IsKeyPressed(rl.KeyboardKey.KEY_UP)) { player.velocity.y = 15; } // jump
+        } else {            
             phs.ApplyForces(&player);
         }
 
@@ -76,15 +83,15 @@ pub fn main() anyerror!void
         phs.ApplyPlayerCollisions(&player, map);
 
         // camera setup
-        camera.target = rl.Vector2 { .x = player.box.x + player.box.width / 2, .y = player.box.y + player.box.height / 2 };
+        camera.target = rl.Vector2 { .x = player.box.x + player.box.width / 2, .y = -(player.box.y + player.box.height / 2) };
         // input related to camera
-        camera.zoom += rl.GetMouseWheelMove() * 0.05;
+        camera.zoom += rl.GetMouseWheelMove() * 0.05 * camera.zoom;
 
 
         // DEBUG
         // try stdout.print("player position: x = {d}, y = {d}\n", .{player.box.x, player.box.y});
         // std.log.debug("player position: x = {d}, y = {d}, velocity: x = {d}, y = {d}", .{player.box.x, player.box.y, player.velocity.x, player.velocity.y});    
-
+        // std.log.debug("{}", .{player.detection_box});
 
         {
             // init drawing
@@ -96,29 +103,51 @@ pub fn main() anyerror!void
             {
                 // init camera
                 camera.Begin();
+                defer camera.End();
 
-                rl.DrawCircleV( .{ .x = 0, .y = 0 } , 4, rl.BLUE);
+                defer rl.DrawCircleV( .{ .x = 0, .y = 0 } , 4, rl.BLUE);
 
+                // what have I done
+                rl.DrawTextureV(texture, .{ .x = -100, .y = -200}, rl.WHITE);
+                
+                
                 // draw player
-                rl.DrawRectangleRec(player.box, rl.RED);
+                var playerRenderBox = .{ .x = player.box.x, .y = -player.box.y - player.box.height, .width = player.box.width, .height = player.box.height };
+                _ = playerRenderBox;
+                // defer rl.DrawRectangleRec( playerRenderBox, rl.RED);
+                defer rl.DrawTextureV( playerTexture, .{ .x = player.box.x, .y = -player.box.y - player.box.height }, rl.WHITE);
+                // rl.DrawRectangleRec(.{ .x = player.detection_box.x.* - 5 , .y = player.detection_box.y.* - 5, .width = player.detection_box.width, .height = player.detection_box.height }, rl.RED);
 
-                for (map.tiles) |tile| {
-                    rl.DrawRectangleRec(tile.box, rl.GRAY);
+
+                // tile drawing
+                for (map.tiles.allocatedSlice()) |tile| {
+                    var dispTile = .{ .x = tile.box.x, .y = tile.box.y - tile.box.height, .width = tile.box.width, .height = tile.box.height };
+                    rl.DrawRectangleRec(dispTile, rl.GRAY);
 
                     // DEBUG
                     if (DEBUG) {
-                        var midpoint: rl.Vector2 = .{ .x = tile.box.x + (tile.box.width / 2), .y = tile.box.y + (tile.box.height / 2) };
+                        // draw block midpoints
+                        var midpoint: rl.Vector2 = .{ .x = tile.box.x + (tile.box.width / 2), .y = -(tile.box.y + (tile.box.height / 2)) };
                         rl.DrawCircleV( midpoint, 4, rl.GREEN);
 
+                        // draw collision rectangles (with player)
                         var col_rec = rl.GetCollisionRec(player.box, tile.box);
                         rl.DrawRectangleRec(col_rec, rl.BLUE);
 
-                        rl.DrawCircleV( .{ .x = tile.box.x, .y = tile.box.y }, 4, rl.ORANGE );
+                        // draw tile origin points
+                        rl.DrawCircleV( .{ .x = tile.box.x, .y = -tile.box.y }, 4, rl.ORANGE );
+
+                        // draw collision rectangle (with player collision box)
+                        rl.DrawRectangleRec( rl.GetCollisionRec( .{ .x = player.detection_box.x.* - 1, .y = -player.detection_box.y.* - 1 - player.box.height, .width = player.detection_box.width, .height = player.detection_box.height}, dispTile ), rl.BLUE);
+                    }
+
+                    if (!fly) {
+                        if (rl.IsKeyPressed(rl.KeyboardKey.KEY_UP) and 
+                            rl.CheckCollisionRecs( .{ .x = player.detection_box.x.* - 1, .y = player.detection_box.y.* - 1, .width = player.detection_box.width, .height = player.detection_box.height}, tile.box )
+                        ) { player.velocity.y = 15; } // jump
                     }
 
                 }
-
-                camera.End();
             }
 
             rl.EndDrawing();

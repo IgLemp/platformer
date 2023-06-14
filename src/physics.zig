@@ -11,7 +11,7 @@ const FRICTION: f32 = 10;
 pub fn ApplyForces(player: *obj.Player) void {
     // apply gravity
     player.velocity.y += GRAVITY * rl.GetFrameTime();
-    player.box.y -= player.velocity.y;
+    player.box.y += player.velocity.y;
 
     // apply friction
     if (player.velocity.x > 0) { player.velocity.x -= FRICTION * rl.GetFrameTime(); }
@@ -24,7 +24,7 @@ pub fn ApplyForces(player: *obj.Player) void {
     player.velocity.y = rlm.Clamp(player.velocity.y, -8, 8);
 }
 
- pub const movement = struct {
+pub const movement = struct {
     pub fn FreeFly(player: *obj.Player) void {
         // apply friction for X
         if (player.velocity.x > 0) { player.velocity.x -= FRICTION * rl.GetFrameTime(); }
@@ -36,7 +36,7 @@ pub fn ApplyForces(player: *obj.Player) void {
         if (player.velocity.y > 0) { player.velocity.y -= FRICTION * rl.GetFrameTime(); }
         if (player.velocity.y < 0) { player.velocity.y += FRICTION * rl.GetFrameTime(); }
         if (player.velocity.y >= -1 and player.velocity.y <= 1) { player.velocity.y = 0; }
-        player.box.y -= player.velocity.y;
+        player.box.y += player.velocity.y;
 
         // clamp velocities to not reach light speed in a second
         player.velocity.x = rlm.Clamp(player.velocity.x, -4, 4);
@@ -49,7 +49,7 @@ pub fn ApplyForces(player: *obj.Player) void {
 pub fn ApplyPlayerCollisions(player: *obj.Player, map: obj.Map) void {
 
     // for every tile
-    for (map.tiles) |tile| {
+    for (map.tiles.allocatedSlice()) |tile| {
 
         // check if any collision occured
         if ( rl.CheckCollisionRecs(player.box, tile.box) ) {
