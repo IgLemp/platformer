@@ -62,6 +62,8 @@ pub fn main() anyerror!void
 
     rl.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
+    var mouse_position: rl.Vector2 = undefined;
+    var mouse_end_position: rl.Vector2 = undefined;
 
     // Main game loop ================================================================
     while (!rl.WindowShouldClose()) // Detect window close button or ESC key
@@ -92,6 +94,29 @@ pub fn main() anyerror!void
         // try stdout.print("player position: x = {d}, y = {d}\n", .{player.box.x, player.box.y});
         // std.log.debug("player position: x = {d}, y = {d}, velocity: x = {d}, y = {d}", .{player.box.x, player.box.y, player.velocity.x, player.velocity.y});    
         // std.log.debug("{}", .{player.detection_box});
+        // std.debug.print("camera terget: x = {d}, y = {d}\n", .{camera.target.x, camera.target.y});
+        var fixed_ws_position_vector_lt: rl.Vector2 = .{ .x = camera.target.x - (screenWidth / 2) * (1 / camera.zoom), .y = camera.target.y - (screenHeight / 2) * (1 / camera.zoom)};
+        var fixed_ws_position_vector_rb: rl.Vector2 = .{ .x = camera.target.x + (screenWidth / 2) * (1 / camera.zoom), .y = camera.target.y + (screenHeight / 2) * (1 / camera.zoom)};
+        var fixed_ws_position_vector_range: rl.Vector2 = .{ .x = fixed_ws_position_vector_rb.x - fixed_ws_position_vector_lt.x, .y = fixed_ws_position_vector_rb.y - fixed_ws_position_vector_lt.y};
+
+        if (rl.IsMouseButtonPressed( .MOUSE_BUTTON_LEFT )) { 
+            mouse_position = rl.GetMousePosition();
+            mouse_position = .{ .x = mouse_position.x / screenWidth, .y =  mouse_position.y / screenHeight};
+            mouse_position = .{ .x = fixed_ws_position_vector_lt.x + mouse_position.x * fixed_ws_position_vector_range.x, .y = fixed_ws_position_vector_lt.y + mouse_position.y * fixed_ws_position_vector_range.y};
+        }
+        
+        if (rl.IsMouseButtonDown( .MOUSE_BUTTON_LEFT )) {
+            mouse_end_position = rl.GetMousePosition();
+            mouse_end_position = .{ .x = mouse_end_position.x / screenWidth, .y =  mouse_end_position.y / screenHeight};
+            mouse_end_position = .{ .x = fixed_ws_position_vector_lt.x + mouse_end_position.x * fixed_ws_position_vector_range.x, .y = fixed_ws_position_vector_lt.y + mouse_end_position.y * fixed_ws_position_vector_range.y};
+        }
+
+        // if (rl.IsMouseButtonReleased( .MOUSE_BUTTON_LEFT )) { 
+        //     var end_pos = rl.GetMousePosition();
+        //     var box_wh = .{ .x = @fabs(mouse_position.x - end_pos.x), .y = @fabs(mouse_position.y - end_pos.y) };
+        //     try objects.append( .{ .box = .{ .x = mouse_position.x, .y = mouse_position.y, .width = box_wh.x, .height = box_wh.y, }, .texture = null } );
+        // }
+
 
         {
             // init drawing
@@ -105,15 +130,17 @@ pub fn main() anyerror!void
                 camera.Begin();
                 defer camera.End();
 
-                defer rl.DrawCircleV( .{ .x = 0, .y = 0 } , 4, rl.BLUE);
+                defer rl.DrawCircleV( .{ .x = 0, .y = 0 }, 4, rl.BLUE);
 
                 // what have I done
                 rl.DrawTextureV(texture, .{ .x = -100, .y = -200}, rl.WHITE);
                 
-                
+                rl.DrawRectangleRec( .{ .x = mouse_position.x, .y = mouse_position.y, .width = @fabs(mouse_position.x - mouse_end_position.x), .height = @fabs(mouse_position.y - mouse_end_position.y) }, rl.BLUE);
+                // rl.DrawCircleV( .{ .x = camera.target.x - (screenWidth / 2) * (1 / camera.zoom), .y = camera.target.y - (screenHeight / 2) * (1 / camera.zoom) }, 5, rl.RED);
+
                 // draw player
-                var playerRenderBox = .{ .x = player.box.x, .y = -player.box.y - player.box.height, .width = player.box.width, .height = player.box.height };
-                _ = playerRenderBox;
+                // var playerRenderBox = .{ .x = player.box.x, .y = -player.box.y - player.box.height, .width = player.box.width, .height = player.box.height };
+                // _ = playerRenderBox;
                 // defer rl.DrawRectangleRec( playerRenderBox, rl.RED);
                 defer rl.DrawTextureV( playerTexture, .{ .x = player.box.x, .y = -player.box.y - player.box.height }, rl.WHITE);
                 // rl.DrawRectangleRec(.{ .x = player.detection_box.x.* - 5 , .y = player.detection_box.y.* - 5, .width = player.detection_box.width, .height = player.detection_box.height }, rl.RED);
