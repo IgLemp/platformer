@@ -49,7 +49,7 @@ pub const movement = struct {
 pub fn ApplyPlayerCollisions(player: *obj.Player, map: obj.Map) void {
 
     // for every tile
-    for (map.tiles.allocatedSlice()) |tile| {
+    for (map.tiles.items) |tile| {
 
         // check if any collision occured
         if ( rl.CheckCollisionRecs(player.box, tile.box) ) {

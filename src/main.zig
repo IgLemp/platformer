@@ -14,8 +14,8 @@ pub fn main() anyerror!void
 {
     // MEMORY ALLOCATOR
     //--------------------------------------------------------------------------------------
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    var arenaAlloc = arena.allocator();
+    var gpAlloc = std.heap.GeneralPurposeAllocator(.{}){};
+    var allocator = gpAlloc.allocator();
 
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ pub fn main() anyerror!void
     //     .{ .box = .{ .x = 100, .y = 0, .width = 20, .height = 200, }, .texture = null }
     // };
 
-    var objects = std.ArrayList(obj.Object).init(arenaAlloc);
+    var objects = std.ArrayList(obj.Object).init(allocator);
     try objects.append(.{ .box = .{ .x = 0,   .y = 0, .width = 300, .height = 20,  }, .texture = null }); 
     try objects.append(.{ .box = .{ .x = 100, .y = 0, .width = 20,  .height = 200, }, .texture = null });
 
@@ -120,7 +120,7 @@ pub fn main() anyerror!void
 
 
                 // tile drawing
-                for (map.tiles.allocatedSlice()) |tile| {
+                for (map.tiles.items) |tile| {
                     var dispTile = .{ .x = tile.box.x, .y = tile.box.y - tile.box.height, .width = tile.box.width, .height = tile.box.height };
                     rl.DrawRectangleRec(dispTile, rl.GRAY);
 
