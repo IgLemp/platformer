@@ -3,11 +3,12 @@ const rlm = @import("raylib-math");
 const std = @import("std");
 const obj = @import("types.zig");
 const phs = @import("physics.zig");
+const utils = @import("utils.zig");
 
 const DEBUG = true;
 
 // NOTE
-// Coordinate system starts at top left corner, whitch means THE Y AXIS IS FLIPPED!!!
+// Coordinate system starts at top left corner, whitch means THE Y AXIS IS FLIPPED!!! (for on screen coordinates)
 
 // MAIN
 pub fn main() anyerror!void
@@ -33,11 +34,6 @@ pub fn main() anyerror!void
         .zoom = 1,
     };
 
-    // var map: obj.Map = obj.Map { .tiles = undefined };
-    // var objects = [_]obj.Object{
-    //     .{ .box = .{ .x = 0, .y = 0, .width = 300, .height = 20, },   .texture = null },
-    //     .{ .box = .{ .x = 100, .y = 0, .width = 20, .height = 200, }, .texture = null }
-    // };
 
     var objects = std.ArrayList(obj.Object).init(allocator);
     try objects.append(.{ .box = .{ .x = 0,   .y = 0, .width = 300, .height = 20,  }, .texture = null }); 
@@ -55,15 +51,16 @@ pub fn main() anyerror!void
     player.detection_box = .{ .x = &player.box.x, .y = &player.box.y, .width = 22, .height = 22 };
     
     var texture = rl.LoadTexture("./resources/log.png");
-    var playerTexture = rl.LoadTexture("./resources/cursor.png");
+    var player_texture = rl.LoadTexture("./resources/cursor.png");
 
     // freefly
     var fly = true;
 
     rl.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
+    var mouse_ws_position: rl.Vector2 = undefined;
+    var mouse_ws_end_position: rl.Vector2 = undefined;
     var mouse_position: rl.Vector2 = undefined;
-    var mouse_end_position: rl.Vector2 = undefined;
 
     // Main game loop ================================================================
     while (!rl.WindowShouldClose()) // Detect window close button or ESC key
@@ -95,26 +92,20 @@ pub fn main() anyerror!void
         // std.log.debug("player position: x = {d}, y = {d}, velocity: x = {d}, y = {d}", .{player.box.x, player.box.y, player.velocity.x, player.velocity.y});    
         // std.log.debug("{}", .{player.detection_box});
         // std.debug.print("camera terget: x = {d}, y = {d}\n", .{camera.target.x, camera.target.y});
-        var fixed_ws_position_vector_lt: rl.Vector2 = .{ .x = camera.target.x - (screenWidth / 2) * (1 / camera.zoom), .y = camera.target.y - (screenHeight / 2) * (1 / camera.zoom)};
-        var fixed_ws_position_vector_rb: rl.Vector2 = .{ .x = camera.target.x + (screenWidth / 2) * (1 / camera.zoom), .y = camera.target.y + (screenHeight / 2) * (1 / camera.zoom)};
-        var fixed_ws_position_vector_range: rl.Vector2 = .{ .x = fixed_ws_position_vector_rb.x - fixed_ws_position_vector_lt.x, .y = fixed_ws_position_vector_rb.y - fixed_ws_position_vector_lt.y};
-
-        if (rl.IsMouseButtonPressed( .MOUSE_BUTTON_LEFT )) { 
-            mouse_position = rl.GetMousePosition();
-            mouse_position = .{ .x = mouse_position.x / screenWidth, .y =  mouse_position.y / screenHeight};
-            mouse_position = .{ .x = fixed_ws_position_vector_lt.x + mouse_position.x * fixed_ws_position_vector_range.x, .y = fixed_ws_position_vector_lt.y + mouse_position.y * fixed_ws_position_vector_range.y};
-        }
         
-        if (rl.IsMouseButtonDown( .MOUSE_BUTTON_LEFT )) {
-            mouse_end_position = rl.GetMousePosition();
-            mouse_end_position = .{ .x = mouse_end_position.x / screenWidth, .y =  mouse_end_position.y / screenHeight};
-            mouse_end_position = .{ .x = fixed_ws_position_vector_lt.x + mouse_end_position.x * fixed_ws_position_vector_range.x, .y = fixed_ws_position_vector_lt.y + mouse_end_position.y * fixed_ws_position_vector_range.y};
-        }
+        mouse_position = rl.GetMousePosition();
+
+        if (rl.IsMouseButtonPressed( .MOUSE_BUTTON_LEFT)) { mouse_ws_position     = utils.GetMousePositionInWS(camera, screenWidth, screenHeight); }
+        if (rl.IsMouseButtonDown( .MOUSE_BUTTON_LEFT))    { mouse_ws_end_position = utils.GetMousePositionInWS(camera, screenWidth, screenHeight); }
+
+        // if (mouse_ws_end_position.x < mouse_ws_position.x) { mouse_ws_position.x = mouse_ws_end_position.x; }
+        // if (mouse_ws_end_position.y < mouse_ws_position.y) { mouse_ws_position.y = mouse_ws_end_position.y; }
+
 
         // if (rl.IsMouseButtonReleased( .MOUSE_BUTTON_LEFT )) { 
-        //     var end_pos = rl.GetMousePosition();
-        //     var box_wh = .{ .x = @fabs(mouse_position.x - end_pos.x), .y = @fabs(mouse_position.y - end_pos.y) };
-        //     try objects.append( .{ .box = .{ .x = mouse_position.x, .y = mouse_position.y, .width = box_wh.x, .height = box_wh.y, }, .texture = null } );
+        //     var box_wh = .{ .x = mouse_ws_position.x - mouse_ws_end_position.x, .y = mouse_ws_position.y - mouse_ws_end_position.y };
+        //     try map.tiles.append( .{ .box = .{ .x = mouse_ws_position.x, .y = mouse_ws_position.y, .width = box_wh.x, .height = box_wh.y, }, .texture = null } );
+        //     std.debug.print("box cords: x = {d}, y = {d}, w = {d}, h = {d}", .{mouse_ws_position.x, mouse_ws_position.y, box_wh.x, box_wh.y});
         // }
 
 
@@ -134,22 +125,22 @@ pub fn main() anyerror!void
 
                 // what have I done
                 rl.DrawTextureV(texture, .{ .x = -100, .y = -200}, rl.WHITE);
-                
-                rl.DrawRectangleRec( .{ .x = mouse_position.x, .y = mouse_position.y, .width = @fabs(mouse_position.x - mouse_end_position.x), .height = @fabs(mouse_position.y - mouse_end_position.y) }, rl.BLUE);
-                // rl.DrawCircleV( .{ .x = camera.target.x - (screenWidth / 2) * (1 / camera.zoom), .y = camera.target.y - (screenHeight / 2) * (1 / camera.zoom) }, 5, rl.RED);
+                    
+                rl.DrawCircleV( .{ .x = mouse_ws_position.x, .y = -mouse_ws_position.y}, 10, rl.RED);
+                rl.DrawCircleV( .{ .x = mouse_ws_end_position.x, .y = -mouse_ws_end_position.y}, 10, rl.BLUE);
 
-                // draw player
+                // draw player =====
                 // var playerRenderBox = .{ .x = player.box.x, .y = -player.box.y - player.box.height, .width = player.box.width, .height = player.box.height };
                 // _ = playerRenderBox;
                 // defer rl.DrawRectangleRec( playerRenderBox, rl.RED);
-                defer rl.DrawTextureV( playerTexture, .{ .x = player.box.x, .y = -player.box.y - player.box.height }, rl.WHITE);
+                defer rl.DrawTextureV( player_texture, .{ .x = player.box.x, .y = -player.box.y - player.box.height }, rl.WHITE);
                 // rl.DrawRectangleRec(.{ .x = player.detection_box.x.* - 5 , .y = player.detection_box.y.* - 5, .width = player.detection_box.width, .height = player.detection_box.height }, rl.RED);
 
 
                 // tile drawing
                 for (map.tiles.items) |tile| {
-                    var dispTile = .{ .x = tile.box.x, .y = tile.box.y - tile.box.height, .width = tile.box.width, .height = tile.box.height };
-                    rl.DrawRectangleRec(dispTile, rl.GRAY);
+                    var disp_tile = .{ .x = tile.box.x, .y = tile.box.y - tile.box.height, .width = tile.box.width, .height = tile.box.height };
+                    rl.DrawRectangleRec(disp_tile, rl.GRAY);
 
                     // DEBUG
                     if (DEBUG) {
@@ -165,7 +156,7 @@ pub fn main() anyerror!void
                         rl.DrawCircleV( .{ .x = tile.box.x, .y = -tile.box.y }, 4, rl.ORANGE );
 
                         // draw collision rectangle (with player collision box)
-                        rl.DrawRectangleRec( rl.GetCollisionRec( .{ .x = player.detection_box.x.* - 1, .y = -player.detection_box.y.* - 1 - player.box.height, .width = player.detection_box.width, .height = player.detection_box.height}, dispTile ), rl.BLUE);
+                        rl.DrawRectangleRec( rl.GetCollisionRec( .{ .x = player.detection_box.x.* - 1, .y = -player.detection_box.y.* - 1 - player.box.height, .width = player.detection_box.width, .height = player.detection_box.height}, disp_tile ), rl.BLUE);
                     }
 
                     if (!fly) {
