@@ -1,6 +1,6 @@
 const rl = @import("raylib");
 
-pub fn GetMousePositionInWS(camera: rl.Camera2D, screenWidth: f32, screenHeight: f32) rl.Vector2 {
+pub fn GetMousePositionWS(camera: rl.Camera2D, screenWidth: f32, screenHeight: f32) rl.Vector2 {
     var mouse_position = rl.GetMousePosition();
 
     // wold space position vectors for left-top and right-botton respectivly

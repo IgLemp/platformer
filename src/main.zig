@@ -4,6 +4,7 @@ const std = @import("std");
 const obj = @import("types.zig");
 const phs = @import("physics.zig");
 const utils = @import("utils.zig");
+const disp = @import("display.zig");
 
 const DEBUG = true;
 
@@ -60,7 +61,6 @@ pub fn main() anyerror!void
 
     var mouse_ws_position: rl.Vector2 = undefined;
     var mouse_ws_end_position: rl.Vector2 = undefined;
-    var mouse_position: rl.Vector2 = undefined;
 
     // Main game loop ================================================================
     while (!rl.WindowShouldClose()) // Detect window close button or ESC key
@@ -93,20 +93,18 @@ pub fn main() anyerror!void
         // std.log.debug("{}", .{player.detection_box});
         // std.debug.print("camera terget: x = {d}, y = {d}\n", .{camera.target.x, camera.target.y});
         
-        mouse_position = rl.GetMousePosition();
 
-        if (rl.IsMouseButtonPressed( .MOUSE_BUTTON_LEFT)) { mouse_ws_position     = utils.GetMousePositionInWS(camera, screenWidth, screenHeight); }
-        if (rl.IsMouseButtonDown( .MOUSE_BUTTON_LEFT))    { mouse_ws_end_position = utils.GetMousePositionInWS(camera, screenWidth, screenHeight); }
+        // MOUSE SELECTION LOGIC =======
+        if (rl.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT)) { mouse_ws_position     = utils.GetMousePositionWS(camera, screenWidth, screenHeight); }
+        if (rl.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))    { mouse_ws_end_position = utils.GetMousePositionWS(camera, screenWidth, screenHeight); }
 
-        // if (mouse_ws_end_position.x < mouse_ws_position.x) { mouse_ws_position.x = mouse_ws_end_position.x; }
-        // if (mouse_ws_end_position.y < mouse_ws_position.y) { mouse_ws_position.y = mouse_ws_end_position.y; }
+        var rec_fixed = .{ .x = mouse_ws_position.x, .y = mouse_ws_position.y };
+        var rec_wh = .{ .x = @fabs(mouse_ws_position.x - mouse_ws_end_position.x), .y = @fabs(mouse_ws_position.y - mouse_ws_end_position.y)};
+        if (mouse_ws_end_position.x < mouse_ws_position.x) { rec_fixed.x = mouse_ws_end_position.x; }
+        if (mouse_ws_end_position.y < mouse_ws_position.y) { rec_fixed.y = mouse_ws_end_position.y; }
 
+        if (rl.IsMouseButtonReleased(.MOUSE_BUTTON_LEFT)) { try map.tiles.append( .{ .box = .{ .x = rec_fixed.x, .y = rec_fixed.y, .width = rec_wh.x, .height = rec_wh.y }, .texture = null } ); }
 
-        // if (rl.IsMouseButtonReleased( .MOUSE_BUTTON_LEFT )) { 
-        //     var box_wh = .{ .x = mouse_ws_position.x - mouse_ws_end_position.x, .y = mouse_ws_position.y - mouse_ws_end_position.y };
-        //     try map.tiles.append( .{ .box = .{ .x = mouse_ws_position.x, .y = mouse_ws_position.y, .width = box_wh.x, .height = box_wh.y, }, .texture = null } );
-        //     std.debug.print("box cords: x = {d}, y = {d}, w = {d}, h = {d}", .{mouse_ws_position.x, mouse_ws_position.y, box_wh.x, box_wh.y});
-        // }
 
 
         {
@@ -121,13 +119,18 @@ pub fn main() anyerror!void
                 camera.Begin();
                 defer camera.End();
 
-                defer rl.DrawCircleV( .{ .x = 0, .y = 0 }, 4, rl.BLUE);
+                defer disp.DrawCircleVWS( .{ .x = 0, .y = 0 }, 4, rl.BLUE);
 
                 // what have I done
                 rl.DrawTextureV(texture, .{ .x = -100, .y = -200}, rl.WHITE);
                     
-                rl.DrawCircleV( .{ .x = mouse_ws_position.x, .y = -mouse_ws_position.y}, 10, rl.RED);
-                rl.DrawCircleV( .{ .x = mouse_ws_end_position.x, .y = -mouse_ws_end_position.y}, 10, rl.BLUE);
+                disp.DrawCircleVWS( mouse_ws_position, 10, rl.RED);
+                disp.DrawCircleVWS( mouse_ws_end_position, 10, rl.BLUE);
+
+                // for drawing region selected with mouse
+                disp.DrawRectangleVWS( rec_fixed, rec_wh, rl.BLUE );
+                
+
 
                 // draw player =====
                 // var playerRenderBox = .{ .x = player.box.x, .y = -player.box.y - player.box.height, .width = player.box.width, .height = player.box.height };
@@ -139,24 +142,23 @@ pub fn main() anyerror!void
 
                 // tile drawing
                 for (map.tiles.items) |tile| {
-                    var disp_tile = .{ .x = tile.box.x, .y = tile.box.y - tile.box.height, .width = tile.box.width, .height = tile.box.height };
-                    rl.DrawRectangleRec(disp_tile, rl.GRAY);
+                    disp.DrawRectangleRecWS(tile.box, rl.GRAY);
 
                     // DEBUG
                     if (DEBUG) {
                         // draw block midpoints
-                        var midpoint: rl.Vector2 = .{ .x = tile.box.x + (tile.box.width / 2), .y = -(tile.box.y + (tile.box.height / 2)) };
-                        rl.DrawCircleV( midpoint, 4, rl.GREEN);
+                        var midpoint: rl.Vector2 = .{ .x = tile.box.x + (tile.box.width / 2), .y = tile.box.y + (tile.box.height / 2) };
+                        disp.DrawCircleVWS( midpoint, 4, rl.GREEN);
 
                         // draw collision rectangles (with player)
                         var col_rec = rl.GetCollisionRec(player.box, tile.box);
-                        rl.DrawRectangleRec(col_rec, rl.BLUE);
+                        disp.DrawRectangleRecWS(col_rec, rl.BLUE);
 
                         // draw tile origin points
-                        rl.DrawCircleV( .{ .x = tile.box.x, .y = -tile.box.y }, 4, rl.ORANGE );
+                        disp.DrawCircleVWS( .{ .x = tile.box.x, .y = tile.box.y }, 4, rl.ORANGE );
 
                         // draw collision rectangle (with player collision box)
-                        rl.DrawRectangleRec( rl.GetCollisionRec( .{ .x = player.detection_box.x.* - 1, .y = -player.detection_box.y.* - 1 - player.box.height, .width = player.detection_box.width, .height = player.detection_box.height}, disp_tile ), rl.BLUE);
+                        disp.DrawRectangleRecWS( rl.GetCollisionRec( .{ .x = player.detection_box.x.* - 1, .y = player.detection_box.y.* - 1, .width = player.detection_box.width, .height = player.detection_box.height}, tile.box ), rl.BLUE);
                     }
 
                     if (!fly) {
