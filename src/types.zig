@@ -3,7 +3,7 @@ const std = @import("std");
 
 pub const Object = struct {
     box: rl.Rectangle,
-    texture: ?rl.Texture2D,
+    texture: ?*rl.Texture2D,
 };
 
 pub const Player = struct {

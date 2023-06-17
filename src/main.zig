@@ -16,8 +16,8 @@ pub fn main() anyerror!void
 {
     // MEMORY ALLOCATOR
     //--------------------------------------------------------------------------------------
-    var gpAlloc = std.heap.GeneralPurposeAllocator(.{}){};
-    var allocator = gpAlloc.allocator();
+    var gp_alloc = std.heap.GeneralPurposeAllocator(.{}){};
+    var allocator = gp_alloc.allocator();
 
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -28,7 +28,7 @@ pub fn main() anyerror!void
     // rl.SetWindowState(rl.ConfigFlags.FLAG_WINDOW_RESIZABLE);
     defer rl.CloseWindow(); // Close window and OpenGL context
 
-    var camera = rl.Camera2D {
+    var ws_camera = rl.Camera2D {
         .target = rl.Vector2 { .x = 0, .y = 0 },
         .offset = rl.Vector2 { .x = screenWidth / 2, .y = screenHeight / 2 },
         .rotation = 0,
@@ -82,9 +82,9 @@ pub fn main() anyerror!void
         phs.ApplyPlayerCollisions(&player, map);
 
         // camera setup
-        camera.target = rl.Vector2 { .x = player.box.x + player.box.width / 2, .y = -(player.box.y + player.box.height / 2) };
+        ws_camera.target = rl.Vector2 { .x = player.box.x + player.box.width / 2, .y = -(player.box.y + player.box.height / 2) };
         // input related to camera
-        camera.zoom += rl.GetMouseWheelMove() * 0.05 * camera.zoom;
+        ws_camera.zoom += rl.GetMouseWheelMove() * 0.05 * ws_camera.zoom;
 
 
         // DEBUG
@@ -95,8 +95,8 @@ pub fn main() anyerror!void
         
 
         // MOUSE SELECTION LOGIC =======
-        if (rl.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT)) { mouse_ws_position     = utils.GetMousePositionWS(camera, screenWidth, screenHeight); }
-        if (rl.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))    { mouse_ws_end_position = utils.GetMousePositionWS(camera, screenWidth, screenHeight); }
+        if (rl.IsMouseButtonPressed(.MOUSE_BUTTON_LEFT)) { mouse_ws_position     = utils.GetMousePositionWS(ws_camera, screenWidth, screenHeight); }
+        if (rl.IsMouseButtonDown(.MOUSE_BUTTON_LEFT))    { mouse_ws_end_position = utils.GetMousePositionWS(ws_camera, screenWidth, screenHeight); }
 
         var rec_fixed = .{ .x = mouse_ws_position.x, .y = mouse_ws_position.y };
         var rec_wh = .{ .x = @fabs(mouse_ws_position.x - mouse_ws_end_position.x), .y = @fabs(mouse_ws_position.y - mouse_ws_end_position.y)};
@@ -110,14 +110,17 @@ pub fn main() anyerror!void
         {
             // init drawing
             rl.BeginDrawing();
+            defer rl.EndDrawing();
             
             // clear screen with WHITE
-            defer rl.ClearBackground(rl.RAYWHITE);
+            rl.ClearBackground(rl.RAYWHITE);
+            
 
             {
                 // init camera
-                camera.Begin();
-                defer camera.End();
+                ws_camera.Begin();
+                defer ws_camera.End();
+
 
                 defer disp.DrawCircleVWS( .{ .x = 0, .y = 0 }, 4, rl.BLUE);
 
@@ -136,7 +139,7 @@ pub fn main() anyerror!void
                 // var playerRenderBox = .{ .x = player.box.x, .y = -player.box.y - player.box.height, .width = player.box.width, .height = player.box.height };
                 // _ = playerRenderBox;
                 // defer rl.DrawRectangleRec( playerRenderBox, rl.RED);
-                defer rl.DrawTextureV( player_texture, .{ .x = player.box.x, .y = -player.box.y - player.box.height }, rl.WHITE);
+                defer disp.DrawTextureVWS( player_texture, .{ .x = player.box.x, .y = player.box.y + player.box.height}, rl.WHITE);
                 // rl.DrawRectangleRec(.{ .x = player.detection_box.x.* - 5 , .y = player.detection_box.y.* - 5, .width = player.detection_box.width, .height = player.detection_box.height }, rl.RED);
 
 
@@ -157,7 +160,7 @@ pub fn main() anyerror!void
                         // draw tile origin points
                         disp.DrawCircleVWS( .{ .x = tile.box.x, .y = tile.box.y }, 4, rl.ORANGE );
 
-                        // draw collision rectangle (with player collision box)
+                        // draw collision rectangle (with player detection box)
                         disp.DrawRectangleRecWS( rl.GetCollisionRec( .{ .x = player.detection_box.x.* - 1, .y = player.detection_box.y.* - 1, .width = player.detection_box.width, .height = player.detection_box.height}, tile.box ), rl.BLUE);
                     }
 
@@ -168,9 +171,9 @@ pub fn main() anyerror!void
                     }
 
                 }
+                
             }
-
-            rl.EndDrawing();
+            
         }
        
     }
